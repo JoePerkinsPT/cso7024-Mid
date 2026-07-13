@@ -1,7 +1,12 @@
 """Core task operations for the CSO7024 task manager.
 
 Tasks are represented as plain dictionaries so the data is easy to inspect
-and to serialise to JSON. Each task stores an id, title, and completion flag.
+and to serialise to JSON. A task has four fields:
+
+    id       an integer, unique within the list
+    title    a non-empty string
+    done     a boolean, False when the task is created
+    priority one of "high", "medium" or "low" (defaults to "medium")
 
 Every operation returns a *new* list rather than modifying its argument. This
 keeps the functions easy to test and reason about.
@@ -12,21 +17,31 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+_VALID_PRIORITIES = {"high", "medium", "low"}
 
-def add_task(tasks: list[dict], title: str) -> list[dict]:
+
+def add_task(tasks: list[dict], title: str, priority: str = "medium") -> list[dict]:
     """Return a new task list with one task appended.
 
     The new task is given the next integer id (one more than the current
-    highest, or 1 for the first task), the supplied title, and a ``done``
-    flag of ``False``.
+    highest, or 1 for the first task), the supplied title, a ``done`` flag of
+    ``False``, and the given priority (defaulting to "medium").
 
     Raises:
-        ValueError: if ``title`` is empty or only whitespace.
+        ValueError: if ``title`` is empty or only whitespace, or if
+            ``priority`` is not one of "high", "medium", "low".
     """
     if title is None or not title.strip():
         raise ValueError("Task title must not be empty")
+    if priority not in _VALID_PRIORITIES:
+        raise ValueError(f"Priority must be one of {_VALID_PRIORITIES}")
     next_id = max((task["id"] for task in tasks), default=0) + 1
-    new_task = {"id": next_id, "title": title.strip(), "done": False}
+    new_task = {
+        "id": next_id,
+        "title": title.strip(),
+        "done": False,
+        "priority": priority,
+    }
     return tasks + [new_task]
 
 
@@ -53,6 +68,17 @@ def remove_task(tasks: list[dict], task_id: int) -> list[dict]:
     if not any(task["id"] == task_id for task in tasks):
         raise KeyError(f"No task with id {task_id}")
     return [task for task in tasks if task["id"] != task_id]
+
+
+def tasks_with_priority(tasks: list[dict], priority: str) -> list[dict]:
+    """Return a new list containing only tasks with the given priority.
+
+    The returned list preserves the original order of matching tasks.
+    Does not modify the input list.
+    """
+    if priority not in _VALID_PRIORITIES:
+        raise ValueError(f"Priority must be one of {_VALID_PRIORITIES}")
+    return [task for task in tasks if task.get("priority") == priority]
 
 
 def load_tasks(path: Path) -> list[dict]:
