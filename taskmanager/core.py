@@ -1,18 +1,10 @@
 """Core task operations for the CSO7024 task manager.
 
 Tasks are represented as plain dictionaries so the data is easy to inspect
-and to serialise to JSON. A task currently has three fields:
-
-    id     an integer, unique within the list
-    title  a non-empty string
-    done   a boolean, False when the task is created
+and to serialise to JSON. Each task stores an id, title, and completion flag.
 
 Every operation returns a *new* list rather than modifying its argument. This
 keeps the functions easy to test and reason about.
-
-In the mid-module assessment you will extend this module with a task
-"priority" and the ability to filter by it. The exact specification is in the
-README. Do not change the behaviour the existing tests rely on.
 """
 
 from __future__ import annotations
