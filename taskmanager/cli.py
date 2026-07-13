@@ -4,7 +4,9 @@ Tasks are stored in ``tasks.json`` in the current working directory.
 
 Examples:
     python -m taskmanager.cli add "Write the report"
+    python -m taskmanager.cli add --priority high "Fix bug"
     python -m taskmanager.cli list
+    python -m taskmanager.cli list --priority high
     python -m taskmanager.cli done 1
     python -m taskmanager.cli remove 1
 """
@@ -21,7 +23,8 @@ DEFAULT_STORE = Path("tasks.json")
 
 def _format(task: dict) -> str:
     box = "[x]" if task["done"] else "[ ]"
-    return f"{task['id']:>3} {box} {task['title']}"
+    priority = task.get("priority", "medium")
+    return f"{task['id']:>3} {box} [{priority}] {task['title']}"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -30,8 +33,19 @@ def main(argv: list[str] | None = None) -> int:
 
     add_p = sub.add_parser("add", help="Add a new task")
     add_p.add_argument("title", help="The task title")
+    add_p.add_argument(
+        "--priority",
+        choices=["high", "medium", "low"],
+        default="medium",
+        help="Task priority (default: medium)",
+    )
 
-    sub.add_parser("list", help="List all tasks")
+    list_p = sub.add_parser("list", help="List all tasks")
+    list_p.add_argument(
+        "--priority",
+        choices=["high", "medium", "low"],
+        help="Show only tasks with this priority",
+    )
 
     done_p = sub.add_parser("done", help="Mark a task as done")
     done_p.add_argument("task_id", type=int, help="The id of the task")
@@ -43,12 +57,17 @@ def main(argv: list[str] | None = None) -> int:
     tasks = core.load_tasks(DEFAULT_STORE)
 
     if args.command == "add":
-        tasks = core.add_task(tasks, args.title)
+        tasks = core.add_task(tasks, args.title, args.priority)
         core.save_tasks(tasks, DEFAULT_STORE)
-        print(f"Added: {args.title}")
+        print(f"Added: {args.title} (priority: {args.priority})")
     elif args.command == "list":
+        if args.priority:
+            tasks = core.tasks_with_priority(tasks, args.priority)
         if not tasks:
-            print("No tasks yet.")
+            if args.priority:
+                print(f"No {args.priority} priority tasks.")
+            else:
+                print("No tasks yet.")
         for task in tasks:
             print(_format(task))
     elif args.command == "done":
